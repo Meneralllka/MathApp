@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Котёнок и дроби</title>
+<style>
+:root{
+  --bg:#fdf6e9; --card:#ffffff; --ink:#3b2f2a; --muted:#8a7a6c; --line:#e6dccb;
+  --pri:#ff8a3d; --pri-d:#e8701f; --acc:#6b5bff; --ok:#2bb673; --err:#ef4b4b; --info:#3a8dde;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+.app{max-width:640px;margin:0 auto;padding:0 12px 40px}
+.screen{display:none}.screen.active{display:block}
+
+/* ---------- меню ---------- */
+.hero{font-size:clamp(34px,11vw,56px);text-align:center;margin-top:18px;white-space:nowrap}
+h1{text-align:center;margin:6px 0 4px;font-size:26px}
+.lead{text-align:center;color:var(--muted);margin:0 0 16px;line-height:1.4}
+.namebox{background:var(--card);border-radius:16px;padding:14px;box-shadow:0 2px 0 var(--line);margin-bottom:14px}
+.namebox label{display:block;font-weight:600;margin-bottom:6px}
+.namebox input{width:100%;font-size:20px;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:#fffdf9;color:var(--ink)}
+.namebox input.bad{border-color:var(--err)}
+.namebox label + input,.namebox label input{margin-bottom:4px}
+.namebox label{margin-top:8px}
+#nameHint{color:var(--err);font-size:14px;min-height:18px;margin-top:4px}
+.tabs{display:flex;gap:6px;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:4px}
+.tab{flex:1;border:none;background:none;border-radius:9px;padding:9px;font-weight:700;color:var(--muted)}
+.tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 0 var(--line)}
+.wide{width:100%;margin-top:10px}
+.hello{font-size:20px}
+.sub{color:var(--muted);font-size:14px;margin-top:2px}
+.loading{text-align:center;color:var(--muted);padding:8px}
+.levels{display:grid;gap:10px}
+.lvl{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 14px;color:var(--ink);box-shadow:0 3px 0 var(--line)}
+.lvl:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
+.lvl .ic{font-size:34px}
+.lvl .nm{font-weight:700;font-size:18px}
+.lvl .ds{color:var(--muted);font-size:14px}
+.lvl .st{margin-left:auto;font-size:18px;white-space:nowrap}
+details.rule{background:var(--card);border-radius:16px;padding:12px 14px;margin-top:14px;box-shadow:0 2px 0 var(--line)}
+details.rule summary{font-weight:700;cursor:pointer}
+details.rule ol{padding-left:22px;line-height:1.6}
+.small{font-size:13px;color:var(--muted);text-align:center;margin-top:14px;line-height:1.5}
+.linkbtn{background:none;border:none;color:var(--acc);text-decoration:underline;padding:4px}
+
+/* ---------- игра ---------- */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding-top:6px}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bar .back{border:none;background:var(--card);border-radius:10px;width:40px;height:40px;font-size:20px;box-shadow:0 2px 0 var(--line);color:var(--ink)}
+.bar .ttl{font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .stats{display:flex;gap:10px;font-weight:700;font-size:15px}
+.sceneWrap{position:relative;border-radius:16px;overflow:hidden;box-shadow:0 2px 0 var(--line)}
+#scene{display:block;width:100%;height:auto}
+#kitten{transition:transform .55s cubic-bezier(.3,1.35,.5,1)}
+#kin{transform-box:fill-box;transform-origin:50% 100%}
+#kin.hop{animation:hop .55s ease}
+#kin.knock{animation:knock .7s ease}
+@keyframes hop{0%{transform:translateY(0)}40%{transform:translateY(-14px)}100%{transform:translateY(0)}}
+@keyframes knock{0%{transform:rotate(0)}20%{transform:rotate(-30deg) translateY(-8px)}45%{transform:rotate(22deg)}70%{transform:rotate(-10deg)}100%{transform:rotate(0)}}
+.puff{animation:puff .9s ease forwards}
+@keyframes puff{0%{opacity:1}100%{opacity:0;transform:translate(-18px,-10px)}}
+.heart{animation:rise 1.6s ease-out forwards}
+@keyframes rise{0%{opacity:1}100%{opacity:0;transform:translateY(-40px)}}
+.toast{position:absolute;left:50%;top:8px;transform:translate(-50%,-30px);background:rgba(59,47,42,.9);color:#fff;padding:6px 12px;border-radius:20px;font-size:14px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.prog{height:8px;background:var(--line);border-radius:4px;margin:8px 0 4px;overflow:hidden}
+.prog>div{height:100%;background:linear-gradient(90deg,var(--pri),#ffc23d);width:0;transition:width .5s}
+.proglbl{font-size:12px;color:var(--muted);text-align:right;margin-bottom:6px}
+
+.card{background:var(--card);border-radius:16px;padding:12px 14px;box-shadow:0 2px 0 var(--line);margin-top:10px}
+.pno{font-size:13px;color:var(--muted);font-weight:600}
+.expr{display:flex;align-items:flex-end;justify-content:center;gap:10px;font-size:30px;font-weight:600;padding:8px 0 2px;flex-wrap:wrap}
+.expr .op{align-self:center}
+.qm{align-self:center;color:var(--pri);font-weight:800}
+.fxw{position:relative;display:inline-flex;flex-direction:column;align-items:center}
+.badge{font-size:15px;font-weight:800;color:var(--acc);background:#eeeaff;border-radius:8px;padding:0 6px;margin-bottom:2px;animation:pop .4s}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.25)}100%{transform:scale(1)}}
+
+.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.15}
+.frac>span{padding:0 3px}
+.frac .bar{display:block;align-self:stretch;height:2.5px;background:currentColor;border-radius:2px;margin:2px 0}
+.fin .bar{margin:4px 0}
+
+.chipsrow{margin-top:12px}
+.chips{display:flex;gap:4px}
+.chip{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.chip.done{background:var(--ok)}
+.chip.cur{background:var(--pri)}
+#stepLabel{font-size:13px;color:var(--muted);margin-top:5px;font-weight:600}
+
+#history:empty{display:none}
+#history{margin-bottom:8px}
+.hl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:16px;padding:6px 0;border-bottom:1px dashed var(--line);color:#5a4c43}
+.hl .sn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;font-size:12px;font-weight:700;flex:none}
+.hl .frac{font-size:15px}
+.q{line-height:1.45;margin:4px 0 8px}
+.q b{color:var(--pri-d)}
+.row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:22px;margin:10px 0}
+.ni{width:3.6ch;min-width:52px;font-size:22px;text-align:center;padding:6px 2px;border:2px solid #cfc4b0;border-radius:10px;background:#fffdf9;color:var(--ink);font-weight:600}
+.ni:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px #e4e0ff}
+.ni.bad{border-color:var(--err);background:#fff0f0;animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.mul{color:var(--acc);font-weight:700}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.primary{background:var(--pri);color:#fff;border:none;border-radius:14px;padding:12px 22px;font-size:18px;font-weight:700;box-shadow:0 3px 0 var(--pri-d)}
+.primary:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pri-d)}
+.alt{background:#fff;color:var(--acc);border:2px solid var(--acc);border-radius:14px;padding:10px 16px;font-size:16px;font-weight:700}
+.fb{margin-top:10px;border-radius:12px;padding:0 12px;line-height:1.45;font-size:16px}
+.fb:empty{display:none}
+.fb.ok{background:#e7f8ef;color:#17784a;padding:10px 12px}
+.fb.err{background:#fdeaea;color:#a12828;padding:10px 12px}
+.fb.info{background:#e8f2fc;color:#1f5f9e;padding:10px 12px}
+.hint{margin-top:6px;color:#6a4f00;background:#fff6d6;border-radius:10px;padding:8px 10px}
+
+.bfly{position:relative;display:inline-flex;align-items:center;gap:34px;font-size:28px;padding:4px 14px;margin:2px 0 4px}
+.bfly svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.bfly line{stroke:var(--acc);stroke-width:2.5;opacity:.65;vector-effect:non-scaling-stroke;stroke-linecap:round}
+
+.done{text-align:center}
+.done .big{font-size:22px;font-weight:800;margin:4px 0}
+.done .row{justify-content:center}
+.mixed{color:var(--muted);font-size:18px;display:inline-flex;align-items:center;gap:4px}
+
+/* ---------- оверлеи ---------- */
+.overlay{position:fixed;inset:0;background:rgba(40,30,20,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.overlay.show{display:flex}
+.modal{background:var(--card);border-radius:20px;padding:20px;max-width:440px;width:100%;text-align:center;max-height:90vh;overflow:auto}
+.modal .big{font-size:52px}
+.modal h2{margin:6px 0}
+.stars{font-size:38px;letter-spacing:4px;margin:8px 0}
+.modal .primary,.modal .alt{width:100%;margin-top:8px}
+.jlist{text-align:left;font-size:14px}
+.jitem{border-bottom:1px solid var(--line);padding:8px 0;line-height:1.4}
+.jitem .t{color:var(--muted);font-size:12px}
+.jitem .g{color:var(--err);font-weight:700}
+.jitem .e{color:var(--ok);font-weight:700}
+
+@media (max-width:420px){
+  .expr{font-size:26px}
+  .row{font-size:20px}
+  .ni{font-size:20px;min-width:48px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     НАСТРОЙКА FIREBASE
+     Вставь сюда объект firebaseConfig из консоли Firebase:
+     Project settings → General → Your apps → Web app → SDK setup (Config).
+     Пока объект пустой — игра работает без аккаунтов,
+     ошибки сохраняются только на устройстве.
+     ================================================================ -->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCDNFG19-W9nm6CQAYcMOm664iXJd04lls",
+  authDomain: "mathgames-79e7e.firebaseapp.com",
+  projectId: "mathgames-79e7e",
+  storageBucket: "mathgames-79e7e.firebasestorage.app",
+  messagingSenderId: "383861147791",
+  appId: "1:383861147791:web:a92306b625cbb9d25c48fa"
+};
+</script>
+
+<div class="app">
+
+  <!-- ===== Меню ===== -->
+  <section id="s-menu" class="screen active">
+    <div class="hero">🐱 🐾 🐾 🐈</div>
+    <h1>Котёнок идёт к маме</h1>
+    <p class="lead">Помоги котёнку добраться до мамы-кошки! Каждый верный шаг решения — шаг котёнка. Ошибёшься — котёнка отбросит назад.</p>
+
+    <div class="namebox" id="authBox"></div>
+
+    <div class="levels" id="levels"></div>
+
+    <details class="rule">
+      <summary>📖 Правило: общий знаменатель</summary>
+      <p>Чтобы найти общий знаменатель двух дробей с большими знаменателями:</p>
+      <ol>
+        <li>Составляем дробь из знаменателей</li>
+        <li>Сокращаем эту дробь до конца</li>
+        <li>Записываем: изначальная дробь = сокращённая дробь</li>
+        <li>Делаем бабочку (умножение крест-накрест)</li>
+      </ol>
+      <p>Пример: 5/12 + 7/18 → 12/18 = 2/3 → 12·3 = 36, 18·2 = 36.<br>
+      Доп. множители: у первой дроби 3, у второй 2 → 15/36 + 14/36 = 29/36.</p>
+    </details>
+
+    <div class="small">
+      <div id="beStatus"></div>
+      <button class="linkbtn" id="openJournal">Журнал ошибок на этом устройстве</button>
+    </div>
+  </section>
+
+  <!-- ===== Игра ===== -->
+  <section id="s-game" class="screen">
+    <div class="top">
+      <div class="bar">
+        <button class="back" id="back" aria-label="Назад">←</button>
+        <div class="ttl" id="lvlName"></div>
+        <div class="stats"><span id="stErr" title="Ошибки">❌ 0</span><span id="stSolved" title="Решено примеров">✅ 0</span></div>
+      </div>
+      <div class="sceneWrap">
+        <svg id="scene" viewBox="0 0 400 140" aria-label="Тропинка котёнка">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#bfe6ff"/><stop offset="1" stop-color="#eef9ff"/>
+            </linearGradient>
+          </defs>
+          <rect width="400" height="140" fill="url(#sky)"/>
+          <path d="M0 70 Q 60 50 120 66 T 240 62 T 400 56 V140 H0Z" fill="#c4e8a6"/>
+          <path d="M0 96 Q 80 80 170 98 T 400 92 V140 H0Z" fill="#b2de8f"/>
+          <text x="30" y="30" font-size="22" text-anchor="middle">☀️</text>
+          <text x="110" y="28" font-size="20" text-anchor="middle">☁️</text>
+          <text x="250" y="22" font-size="18" text-anchor="middle">☁️</text>
+          <text x="62" y="76" font-size="26" text-anchor="middle">🌳</text>
+          <text x="215" y="72" font-size="24" text-anchor="middle">🌲</text>
+          <text x="300" y="80" font-size="20" text-anchor="middle">🌳</text>
+          <text x="120" y="134" font-size="13" text-anchor="middle">🌼</text>
+          <text x="262" y="136" font-size="13" text-anchor="middle">🌸</text>
+          <text x="20" y="80" font-size="12" text-anchor="middle">🌷</text>
+          <path id="trail" d="M 18 116 C 70 136, 100 82, 150 94 S 236 128, 282 98 S 320 58, 350 60"
+                fill="none" stroke="#ead2a0" stroke-width="15" stroke-linecap="round"/>
+          <g id="stones"></g>
+          <text x="384" y="50" font-size="30" text-anchor="middle">🏠</text>
+          <g id="mom"><text id="momTxt" x="0" y="-2" font-size="30" text-anchor="middle">🐈</text></g>
+          <g id="fx"></g>
+          <g id="kitten"><g id="kin"><text x="0" y="-3" font-size="24" text-anchor="middle">🐱</text></g></g>
+        </svg>
+        <div class="toast" id="toast"></div>
+      </div>
+      <div class="prog"><div id="progFill"></div></div>
+      <div class="proglbl" id="progLbl"></div>
+    </div>
+
+    <div class="card" id="problem"></div>
+
+    <div class="card">
+      <div id="history"></div>
+      <div id="current"></div>
+      <div class="chipsrow"><div class="chips" id="chips"></div><div id="stepLabel"></div></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== Победа ===== -->
+<div class="overlay" id="ov-win">
+  <div class="modal">
+    <div class="big">🐱💗🐈</div>
+    <h2>Котёнок дома!</h2>
+    <div class="stars" id="winStars"></div>
+    <div id="winStats"></div>
+    <button class="primary" id="winNext">Следующий уровень ➜</button>
+    <button class="alt" id="winAgain">Ещё раз</button>
+    <button class="alt" id="winMenu">К уровням</button>
+  </div>
+</div>
+
+<!-- ===== Журнал ===== -->
+<div class="overlay" id="ov-journal">
+  <div class="modal">
+    <h2>📋 Журнал ошибок</h2>
+    <div class="small" style="margin-top:0">Только на этом устройстве (последние 300)</div>
+    <div class="jlist" id="jlist"></div>
+    <button class="alt" id="jClear">Очистить</button>
+    <button class="primary" id="jClose">Закрыть</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= утилиты ================= */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const smallestPrime = n => { for (let p = 2; p * p <= n; p++) if (n % p === 0) return p; return n; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ================= уровни ================= */
+const LEVELS = [
+  { id: 'lesson', icon: '📒', name: 'Задачи из урока', desc: 'Примеры 3–7 с доски, потом похожие', tiles: 30, knock: 2,
+    fixed: [[5,12,'+',7,18],[11,14,'-',3,21],[7,15,'+',9,20],[13,18,'-',5,24],[5,16,'+',11,24]],
+    ops: ['+','-'], g: [2,3,4,6], ab: [2,5], maxD: 40, reduceChance: 0.4 },
+  { id: 'easy', icon: '🌼', name: 'Тропинка у дома', desc: 'Сложение, знаменатели до 30', tiles: 22, knock: 1,
+    ops: ['+'], g: [2,3,4,5,6], ab: [2,5], maxD: 30, reduceChance: 0.3 },
+  { id: 'medium', icon: '🌲', name: 'Лесная дорожка', desc: 'Сложение и вычитание, до 48', tiles: 28, knock: 2,
+    ops: ['+','-'], g: [2,3,4,6,8], ab: [2,7], maxD: 48, reduceChance: 0.45 },
+  { id: 'hard', icon: '⛰️', name: 'Горный перевал', desc: 'Знаменатели до 96, ответ часто сокращается', tiles: 34, knock: 2,
+    ops: ['+','-'], g: [4,6,8,9,10,12], ab: [2,8], maxD: 96, reduceChance: 0.7 }
+];
+
+const STEPS = ['denom','reduce','equal','butterfly','mult','convert','compute','final'];
+const STEP_NAMES = {
+  denom: 'Дробь из знаменателей', reduce: 'Сокращаем до конца', equal: 'Записываем равенство',
+  butterfly: 'Бабочка', mult: 'Доп. множители', convert: 'Приводим к общему знаменателю',
+  compute: 'Считаем', final: 'Сокращаем ответ'
+};
+
+const S = { student: store.get('kf_name', ''), mode: 'local', authTab: 'in' };
+
+/* ================= аккаунты и прогресс (Firebase Auth + Firestore) =================
+   Структура в Firestore:
+   students/{uid}                  — профиль: name, login, totals, levels (звёзды), stepStats, errorTypes
+   students/{uid}/sessions/{sid}   — каждый заход в игру
+   students/{uid}/errors/{auto}    — каждая ошибка (шаг, что ввёл, что верно)
+   students/{uid}/results/{auto}   — каждый пройденный/брошенный уровень
+*/
+const SID = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+  : Date.now().toString(36) + Math.random().toString(36).slice(2);
+const FB_VERSION = '10.12.2';
+const hasConfig = () => !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+const deviceKind = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+const normLogin = s => String(s).trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+
+const Cloud = {
+  A: null, F: null, auth: null, db: null, user: null, profile: null, sessionStarted: false,
+
+  async init() {
+    const base = `https://www.gstatic.com/firebasejs/${FB_VERSION}/`;
+    const [appM, A, F] = await Promise.all([
+      import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
+    this.A = A; this.F = F;
+    const app = appM.initializeApp(FIREBASE_CONFIG);
+    this.auth = A.getAuth(app);
+    try { this.db = F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
+    catch (e) { this.db = F.getFirestore(app); }
+    await new Promise(res => { let un = null; un = A.onAuthStateChanged(this.auth, u => { if (un) un(); this.user = u; res(); }); });
+    if (this.user) await this.loadProfile();
+  },
+  // Логин ученика превращается во «внутренний» email — ученику email не нужен.
+  email(login) {
+    const hex = Array.from(new TextEncoder().encode(normLogin(login))).map(b => b.toString(16).padStart(2, '0')).join('');
+    return 'u' + hex + '@students.kitten-fractions.app';
+  },
+  pass(pin) { return 'kf-' + pin + '-cat'; },   // Firebase требует пароль ≥ 6 символов
+  ref() { return this.F.doc(this.db, 'students', this.user.uid); },
+  async loadProfile() {
+    const F = this.F;
+    let snap = null;
+    try { snap = await F.getDoc(this.ref()); } catch (e) { console.warn('profile', e); }
+    if (snap && snap.exists()) this.profile = snap.data();
+    else {
+      this.profile = { name: this.user.displayName || 'Ученик', login: '', levels: {} };
+      F.setDoc(this.ref(), { name: this.profile.name, createdAt: F.serverTimestamp() }, { merge: true }).catch(() => {});
+    }
+    this.profile.levels = this.profile.levels || {};
+  },
+  async register(login, name, pin) {
+    const A = this.A, F = this.F;
+    const cred = await A.createUserWithEmailAndPassword(this.auth, this.email(login), this.pass(pin));
+    this.user = cred.user;
+    A.updateProfile(cred.user, { displayName: name }).catch(() => {});
+    this.profile = { name, login: normLogin(login), levels: {} };
+    await F.setDoc(this.ref(), {
+      name, login: normLogin(login), createdAt: F.serverTimestamp(), lastSeen: F.serverTimestamp(),
+      totals: { sessions: 0, steps: 0, errors: 0, solved: 0, levelsCompleted: 0 },
+      levels: {}, stepStats: {}, errorTypes: {}
+    });
+  },
+  async login(login, pin) {
+    const cred = await this.A.signInWithEmailAndPassword(this.auth, this.email(login), this.pass(pin));
+    this.user = cred.user;
+    await this.loadProfile();
+  },
+  async logout() {
+    await this.A.signOut(this.auth);
+    this.user = null; this.profile = null; this.sessionStarted = false;
+  },
+  upd(fields) {
+    if (!this.user) return;
+    fields.lastSeen = this.F.serverTimestamp();
+    this.F.updateDoc(this.ref(), fields).catch(e => console.warn('cloud', e));
+  },
+  add(sub, data) {
+    if (!this.user) return;
+    const F = this.F;
+    F.addDoc(F.collection(this.db, 'students', this.user.uid, sub), Object.assign({}, data, { at: F.serverTimestamp() }))
+      .catch(e => console.warn('cloud', e));
+  },
+  startSession() {
+    if (!this.user || this.sessionStarted) return;
+    this.sessionStarted = true;
+    const F = this.F;
+    F.setDoc(F.doc(this.db, 'students', this.user.uid, 'sessions', SID),
+      { startedAt: F.serverTimestamp(), device: deviceKind(), clientTime: new Date().toISOString() })
+      .catch(e => console.warn('cloud', e));
+    this.upd({ 'totals.sessions': F.increment(1) });
+  },
+  stepOk(step) {
+    if (!this.user) return;
+    const F = this.F;
+    this.upd({ [`stepStats.${step}.ok`]: F.increment(1), 'totals.steps': F.increment(1) });
+  },
+  error(rec) {
+    if (!this.user) return;
+    const F = this.F;
+    this.add('errors', rec);
+    this.upd({ 'totals.errors': F.increment(1), [`stepStats.${rec.step}.err`]: F.increment(1),
+      [`errorTypes.${rec.errorType}`]: F.increment(1) });
+  },
+  result(rec) {
+    if (!this.user) return;
+    const F = this.F;
+    this.add('results', rec);
+    const lv = this.profile.levels[rec.level] || {};
+    lv.attempts = (lv.attempts || 0) + 1;
+    const u = { [`levels.${rec.level}.attempts`]: F.increment(1), 'totals.solved': F.increment(rec.solved) };
+    if (rec.completed) {
+      lv.completed = (lv.completed || 0) + 1;
+      lv.bestStars = Math.max(lv.bestStars || 0, rec.stars);
+      u[`levels.${rec.level}.completed`] = F.increment(1);
+      u[`levels.${rec.level}.bestStars`] = lv.bestStars;
+      u['totals.levelsCompleted'] = F.increment(1);
+    }
+    this.profile.levels[rec.level] = lv;
+    this.upd(u);
+  },
+  errText(e) {
+    const c = (e && e.code) || '';
+    if (c === 'auth/email-already-in-use') return 'Такой логин уже занят — придумай другой.';
+    if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/invalid-login-credentials'].includes(c))
+      return 'Неверный логин или PIN-код.';
+    if (c === 'auth/too-many-requests') return 'Слишком много попыток. Подожди пару минут.';
+    if (c === 'auth/network-request-failed') return 'Нет интернета. Проверь подключение.';
+    if (c === 'auth/operation-not-allowed' || c === 'auth/configuration-not-found')
+      return 'Вход не включён в Firebase (учителю: Authentication → Sign-in method → Email/Password).';
+    if (c.startsWith('auth/api-key-not-valid')) return 'Неверный apiKey в настройках Firebase (учителю: проверь FIREBASE_CONFIG).';
+    if (c === 'auth/invalid-email') return 'Такой логин не подходит — попробуй другой.';
+    return 'Ошибка: ' + (c || (e && e.message) || e);
+  }
+};
+
+function journal(rec) { const j = store.get('kf_journal', []); j.push(rec); store.set('kf_journal', j.slice(-300)); }
+
+/* ================= генерация примеров ================= */
+function buildProblem(n1, d1, op, n2, d2) {
+  const g = gcd(d1, d2), a = d1 / g, b = d2 / g, L = d1 * b;
+  const N1 = n1 * b, N2 = n2 * a, R = op === '+' ? N1 + N2 : N1 - N2;
+  return { n1, d1, op, n2, d2, a, b, L, m1: b, m2: a, N1, N2, R };
+}
+function randCoprime(d) {
+  const c = []; for (let i = 1; i < d; i++) if (gcd(i, d) === 1) c.push(i);
+  return pick(c);
+}
+function genProblem(cfg) {
+  const wantReducible = Math.random() < (cfg.reduceChance || 0);
+  let fallback = null;
+  for (let t = 0; t < 2000; t++) {
+    const g = pick(cfg.g), a = rnd(cfg.ab[0], cfg.ab[1]), b = rnd(cfg.ab[0], cfg.ab[1]);
+    if (a === b || gcd(a, b) !== 1) continue;
+    const d1 = g * a, d2 = g * b;
+    if (Math.max(d1, d2) > cfg.maxD) continue;
+    const n1 = randCoprime(d1), n2 = randCoprime(d2), op = pick(cfg.ops);
+    let P;
+    if (op === '-') {
+      if (n1 * d2 === n2 * d1) continue;
+      P = n1 * d2 > n2 * d1 ? buildProblem(n1, d1, op, n2, d2) : buildProblem(n2, d2, op, n1, d1);
+    } else P = buildProblem(n1, d1, op, n2, d2);
+    const key = `${P.n1}/${P.d1}${P.op}${P.n2}/${P.d2}`;
+    if (key === S.lastKey) continue;
+    fallback = fallback || P;
+    if (wantReducible !== (gcd(P.R, P.L) > 1)) continue;
+    return P;
+  }
+  return fallback;
+}
+
+/* ================= HTML-хелперы ================= */
+const f = (n, d) => `<span class="frac"><span>${n}</span><i class="bar"></i><span>${d}</span></span>`;
+const inp = k => `<input class="ni" data-k="${k}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="4" aria-label="число">`;
+const fi = (k1, k2) => `<span class="frac fin">${inp(k1)}<i class="bar"></i>${inp(k2)}</span>`;
+const opS = P => P.op === '+' ? '+' : '−';
+const probStr = P => `${P.n1}/${P.d1} ${P.op} ${P.n2}/${P.d2}`;
+const chainHtml = ch => ch.map(([n, d]) => f(n, d)).join(' = ');
+const fx = (n, d, m) => `<span class="fxw">${m ? `<span class="badge">×${m}</span>` : ''}${f(n, d)}</span>`;
+
+function multHint(x, y) {
+  const big = Math.max(x, y), sm = Math.min(x, y);
+  if (big < 10) return `${x} × ${y} — вспомни таблицу умножения.`;
+  const t = big - big % 10, o = big % 10;
+  if (!o) return `${big} × ${sm}: умножь ${t / 10} × ${sm} и припиши 0.`;
+  return `${big} × ${sm} = ${t} × ${sm} + ${o} × ${sm} = ${t * sm} + ${o * sm}`;
+}
+function arithHint(a, b, op) {
+  if (b < 10) return `${a} ${op === '+' ? '+' : '−'} ${b}: считай по одному или столбиком.`;
+  const t = b - b % 10, o = b % 10;
+  return op === '+'
+    ? `${a} + ${b}: сначала прибавь ${t}, потом ${o}.`
+    : `${a} − ${b}: сначала вычти ${t}, потом ${o}.`;
+}
+
+/* ================= проверка шагов ================= */
+function checkReduce(v, chain, irr, isFinal) {
+  const [x, y] = chain[chain.length - 1], [n0, d0] = chain[0];
+  const g = gcd(x, y), g0 = gcd(n0, d0);
+  const expected = `${n0 / g0}/${d0 / g0}`;
+  const hintDiv = g > 1 ? `Оба числа ${x} и ${y} делятся на ${smallestPrime(g)}.` : `Дробь ${x}/${y} уже не сокращается.`;
+  if (irr) {
+    if (g === 1) return { ok: true, done: true };
+    return { ok: false, type: 'missed_reduction', given: 'нельзя сократить', expected,
+      msg: `А вот и можно! У чисел ${x} и ${y} есть общий делитель.`, hint: hintDiv };
+  }
+  const given = `${v.a}/${v.b}`;
+  if (!(v.a > 0 && v.b > 0)) return { ok: false, type: 'zero', given, expected, wrong: ['a','b'], msg: 'Ноль тут не подойдёт 🙂', hint: hintDiv };
+  if (v.a * y !== v.b * x) {
+    let msg = `Эта дробь не равна ${x}/${y}. Числитель и знаменатель надо делить на <b>одно и то же</b> число.`;
+    if (isFinal && g === 1) msg += ' А если сократить нельзя — нажми «Нельзя сократить».';
+    return { ok: false, type: 'not_equal', given, expected, wrong: ['a','b'], msg, hint: hintDiv };
+  }
+  if (v.a === x && v.b === y) {
+    if (g === 1) return { ok: true, done: true };
+    return { ok: false, type: 'not_reduced', given, expected, wrong: ['a','b'],
+      msg: 'Ты переписал ту же дробь. Надо сократить — раздели оба числа на одно и то же число.', hint: hintDiv };
+  }
+  if (v.a > x) return { ok: false, type: 'multiplied', given, expected, wrong: ['a','b'],
+    msg: 'Дробь равна, но ты <b>умножил</b>. Сокращать — значит <b>делить</b>, числа должны стать меньше.', hint: hintDiv };
+  if (gcd(v.a, v.b) === 1) return { ok: true, done: true, push: [v.a, v.b] };
+  return { ok: true, done: false, push: [v.a, v.b], msg: `Верно! Но ${v.a}/${v.b} можно сократить ещё 👍` };
+}
+
+const V = {
+  denom(v) {
+    const P = S.P;
+    const given = `${v.a}/${v.b}`, expected = `${P.d1}/${P.d2}`;
+    if (v.a === P.d1 && v.b === P.d2) return { ok: true, done: true };
+    let type = 'wrong', msg = 'Возьми <b>знаменатели</b> (нижние числа) обеих дробей: первый — сверху, второй — снизу.';
+    if (v.a === P.d2 && v.b === P.d1) { type = 'swapped'; msg = 'Почти! Только наоборот: <b>сверху</b> — знаменатель <b>первой</b> дроби, снизу — второй.'; }
+    else if (v.a === P.n1 && v.b === P.n2) { type = 'numerators'; msg = 'Это числители. Нам нужны <b>знаменатели</b> — нижние числа дробей.'; }
+    const wrong = []; if (v.a !== P.d1) wrong.push('a'); if (v.b !== P.d2) wrong.push('b');
+    return { ok: false, type, msg, given, expected, wrong, hint: `Знаменатель первой дроби — ${P.d1}, второй — ${P.d2}.` };
+  },
+  reduce(v) { return checkReduce(v, S.chain, false, false); },
+  equal(v) {
+    const P = S.P;
+    const given = `${v.a}/${v.b} = ${v.c}/${v.d}`, expected = `${P.d1}/${P.d2} = ${P.a}/${P.b}`;
+    if (v.a === P.d1 && v.b === P.d2 && v.c === P.a && v.d === P.b) return { ok: true, done: true };
+    const wrong = []; [['a',P.d1],['b',P.d2],['c',P.a],['d',P.b]].forEach(([k, e]) => { if (v[k] !== e) wrong.push(k); });
+    let type = 'wrong', msg = 'Слева пиши <b>дробь из знаменателей</b> (шаг 1), справа — <b>сокращённую</b> дробь (конец шага 2).';
+    if (v.a === P.a && v.b === P.b && v.c === P.d1 && v.d === P.d2) { type = 'swapped'; msg = 'Наоборот: слева — изначальная дробь, справа — сокращённая.'; }
+    return { ok: false, type, msg, given, expected, wrong, hint: 'Посмотри на строчки 1 и 2 выше — там всё уже есть.' };
+  },
+  butterfly(v) {
+    const P = S.P, e1 = P.d1 * P.b, e2 = P.d2 * P.a;
+    const given = `${P.d1}×${P.b}=${v.p}; ${P.d2}×${P.a}=${v.q}`, expected = `${P.d1}×${P.b}=${e1}; ${P.d2}×${P.a}=${e2}`;
+    if (v.p === e1 && v.q === e2) return { ok: true, done: true };
+    const wrong = []; if (v.p !== e1) wrong.push('p'); if (v.q !== e2) wrong.push('q');
+    const which = wrong.map(k => k === 'p' ? `${P.d1} × ${P.b}` : `${P.d2} × ${P.a}`).join(' и ');
+    let msg = `Проверь умножение: ${which}.`;
+    if (v.p !== v.q) msg += ' Подсказка-проверка: на бабочке оба произведения всегда получаются <b>одинаковыми</b>!';
+    const hint = wrong.map(k => k === 'p' ? multHint(P.d1, P.b) : multHint(P.d2, P.a)).join('<br>');
+    return { ok: false, type: 'product', msg, given, expected, wrong, hint };
+  },
+  mult(v) {
+    const P = S.P;
+    const given = `×${v.m1}, ×${v.m2}`, expected = `×${P.m1}, ×${P.m2}`;
+    if (v.m1 === P.m1 && v.m2 === P.m2) return { ok: true, done: true };
+    const wrong = []; if (v.m1 !== P.m1) wrong.push('m1'); if (v.m2 !== P.m2) wrong.push('m2');
+    let type = 'wrong', msg = `Доп. множитель — это число, на которое умножили <b>знаменатель</b> дроби, чтобы получилось ${P.L}. Посмотри на бабочку.`;
+    if (v.m1 === P.m2 && v.m2 === P.m1) { type = 'swapped'; msg = `Перепутаны! На бабочке ${P.d1} умножали на ${P.b}, значит у первой дроби множитель — то число, что стоит «напротив» ${P.d1}.`; }
+    return { ok: false, type, msg, given, expected, wrong, hint: `${P.d1} × ? = ${P.L}  и  ${P.d2} × ? = ${P.L}` };
+  },
+  convert(v) {
+    const P = S.P;
+    const given = `${v.n1}/${v.l1}, ${v.n2}/${v.l2}`, expected = `${P.N1}/${P.L}, ${P.N2}/${P.L}`;
+    if (v.n1 === P.N1 && v.l1 === P.L && v.n2 === P.N2 && v.l2 === P.L) return { ok: true, done: true };
+    const wrong = []; [['n1',P.N1],['l1',P.L],['n2',P.N2],['l2',P.L]].forEach(([k, e]) => { if (v[k] !== e) wrong.push(k); });
+    if (v.l1 !== P.L || v.l2 !== P.L)
+      return { ok: false, type: 'denominator', given, expected, wrong,
+        msg: `Знаменатель у обеих дробей должен стать общим — <b>${P.L}</b>.`, hint: `Общий знаменатель мы нашли на бабочке: ${P.L}.` };
+    const hints = [];
+    if (v.n1 !== P.N1) hints.push(multHint(P.n1, P.m1));
+    if (v.n2 !== P.N2) hints.push(multHint(P.n2, P.m2));
+    return { ok: false, type: 'numerator', given, expected, wrong,
+      msg: 'Числитель тоже умножаем на <b>тот же</b> доп. множитель (фиолетовый значок).', hint: hints.join('<br>') };
+  },
+  compute(v) {
+    const P = S.P;
+    const given = `${v.r}/${v.l}`, expected = `${P.R}/${P.L}`;
+    if (v.r === P.R && v.l === P.L) return { ok: true, done: true };
+    const wrong = []; if (v.r !== P.R) wrong.push('r'); if (v.l !== P.L) wrong.push('l');
+    if (v.l !== P.L) {
+      let type = 'denominator', msg = `Знаменатель остаётся общим: <b>${P.L}</b>.`;
+      if (P.op === '+' && v.l === 2 * P.L) { type = 'added_denominators'; msg = `Знаменатели <b>не складываем</b>! Общий знаменатель остаётся — ${P.L}.`; }
+      if (P.op === '-' && v.l === 0) { type = 'subtracted_denominators'; msg = `Знаменатели <b>не вычитаем</b>! Общий знаменатель остаётся — ${P.L}.`; }
+      return { ok: false, type, msg, given, expected, wrong, hint: 'Со знаменателем ничего не делаем — просто переписываем.' };
+    }
+    let type = 'arith', msg = `Проверь, сколько будет ${P.N1} ${opS(P)} ${P.N2}.`;
+    if (P.op === '-' && v.r === P.N1 + P.N2) { type = 'wrong_op'; msg = 'Тут <b>вычитание</b>, а ты сложил!'; }
+    if (P.op === '+' && v.r === P.N1 - P.N2) { type = 'wrong_op'; msg = 'Тут <b>сложение</b>, а ты вычел!'; }
+    return { ok: false, type, msg, given, expected, wrong, hint: arithHint(P.N1, P.N2, P.op) };
+  },
+  final(v, irr) { return checkReduce(v, S.fchain, irr, true); }
+};
+
+/* ================= сцена ================= */
+function buildScene() {
+  const path = $('#trail'), total = path.getTotalLength();
+  S.pts = [];
+  for (let i = 0; i <= S.tiles; i++) { const p = path.getPointAtLength(total * i / S.tiles); S.pts.push({ x: p.x, y: p.y }); }
+  $('#stones').innerHTML = S.pts.slice(0, S.tiles).map((p, i) =>
+    `<ellipse cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" rx="${i % 5 === 0 ? 5 : 3.6}" ry="${i % 5 === 0 ? 3.2 : 2.4}" fill="${i % 5 === 0 ? '#c49a62' : '#d6b27e'}"/>`).join('');
+  const m = S.pts[S.tiles];
+  $('#mom').setAttribute('transform', `translate(${m.x + 6},${m.y})`);
+  $('#fx').innerHTML = '';
+}
+function placeKitten(anim, instant) {
+  const p = S.pts[S.pos], k = $('#kitten');
+  if (instant) k.style.transition = 'none';
+  k.style.transform = `translate(${p.x}px, ${p.y}px)`;
+  if (instant) { void k.getBoundingClientRect(); k.style.transition = ''; }
+  const inner = $('#kin');
+  if (anim === 'hop' || anim === 'knock') {
+    inner.classList.remove('hop', 'knock'); void inner.getBoundingClientRect(); inner.classList.add(anim);
+  }
+  if (anim === 'knock') fxText('💨', p.x + 14, p.y - 8, 'puff', 900);
+}
+function fxText(t, x, y, cls, ms) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(NS, 'g'); g.setAttribute('transform', `translate(${x},${y})`);
+  const el = document.createElementNS(NS, 'text');
+  el.setAttribute('font-size', '18'); el.setAttribute('text-anchor', 'middle'); el.setAttribute('class', cls); el.textContent = t;
+  g.appendChild(el); $('#fx').appendChild(g);
+  setTimeout(() => g.remove(), ms);
+}
+let toastT;
+function toast(t) {
+  const el = $('#toast'); el.textContent = t; el.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1800);
+}
+function updateProgress() {
+  $('#progFill').style.width = (100 * S.pos / S.tiles) + '%';
+  $('#progLbl').textContent = `До мамы: ${S.tiles - S.pos} ${plural(S.tiles - S.pos, 'шаг', 'шага', 'шагов')}`;
+}
+function updateStats() { $('#stErr').textContent = '❌ ' + S.errors; $('#stSolved').textContent = '✅ ' + S.solved; }
+function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; if (m10 === 1 && m100 !== 11) return a; if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return b; return c; }
+
+/* ================= отрисовка решения ================= */
+function renderProblem() {
+  const P = S.P, done = S.step === 'done';
+  const ans = done ? f(...S.fchain[S.fchain.length - 1]) : '<span class="qm">?</span>';
+  $('#problem').innerHTML = `<div class="pno">Пример ${S.problemNo}</div>
+    <div class="expr">${fx(P.n1, P.d1, S.showMult ? P.m1 : 0)}<span class="op">${opS(P)}</span>${fx(P.n2, P.d2, S.showMult ? P.m2 : 0)}<span class="op">=</span>${ans}</div>`;
+}
+function renderChips() {
+  const idx = S.step === 'done' ? STEPS.length : STEPS.indexOf(S.step);
+  $('#chips').innerHTML = STEPS.map((s, i) => `<span class="chip ${i < idx ? 'done' : i === idx ? 'cur' : ''}"></span>`).join('');
+  $('#stepLabel').textContent = S.step === 'done' ? 'Пример решён!' : `Шаг ${idx + 1} из ${STEPS.length} · ${STEP_NAMES[S.step]}`;
+}
+function butterflyHtml(P) {
+  return `<div class="bfly">${f(P.d1, P.d2)}<span>=</span>${f(P.a, P.b)}
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none"><line x1="26" y1="30" x2="74" y2="72"/><line x1="26" y1="72" x2="74" y2="30"/></svg></div>`;
+}
+function renderCurrent() {
+  const P = S.P;
+  let h = '';
+  switch (S.step) {
+    case 'denom':
+      h = `<div class="q"><b>Шаг 1.</b> Составь дробь из знаменателей: знаменатель первой дроби — сверху, второй — снизу.</div>
+           <div class="row">${fi('a', 'b')}</div>`; break;
+    case 'reduce':
+      h = `<div class="q"><b>Шаг 2.</b> Сократи эту дробь <b>до конца</b>. Можно в несколько шагов.</div>
+           <div class="row">${chainHtml(S.chain)} = ${fi('a', 'b')}</div>`; break;
+    case 'equal':
+      h = `<div class="q"><b>Шаг 3.</b> Запиши: изначальная дробь = сокращённая дробь.</div>
+           <div class="row">${fi('a', 'b')} = ${fi('c', 'd')}</div>`; break;
+    case 'butterfly':
+      h = `<div class="q"><b>Шаг 4.</b> Делаем бабочку — умножаем крест-накрест.</div>
+           ${butterflyHtml(P)}
+           <div class="row">${P.d1} × ${P.b} = ${inp('p')}</div>
+           <div class="row">${P.d2} × ${P.a} = ${inp('q')}</div>`; break;
+    case 'mult':
+      h = `<div class="q"><b>Шаг 5.</b> Общий знаменатель — <b>${P.L}</b>. Найди доп. множители: на что умножили знаменатель каждой дроби, чтобы получить ${P.L}?</div>
+           <div class="row">${f(P.n1, P.d1)} <span class="mul">×</span> ${inp('m1')}</div>
+           <div class="row">${f(P.n2, P.d2)} <span class="mul">×</span> ${inp('m2')}</div>`; break;
+    case 'convert':
+      h = `<div class="q"><b>Шаг 6.</b> Приведи обе дроби к знаменателю ${P.L}: умножь числитель и знаменатель на доп. множитель.</div>
+           <div class="row">${fx(P.n1, P.d1, P.m1)} = ${fi('n1', 'l1')}</div>
+           <div class="row">${fx(P.n2, P.d2, P.m2)} = ${fi('n2', 'l2')}</div>`; break;
+    case 'compute':
+      h = `<div class="q"><b>Шаг 7.</b> ${P.op === '+' ? 'Сложи' : 'Вычти'} дроби с одинаковыми знаменателями.</div>
+           <div class="row">${f(P.N1, P.L)} ${opS(P)} ${f(P.N2, P.L)} = ${fi('r', 'l')}</div>`; break;
+    case 'final':
+      h = `<div class="q"><b>Шаг 8.</b> Сократи ответ, если можно. Если нельзя — нажми «Нельзя сократить».</div>
+           <div class="row">${chainHtml(S.fchain)} = ${fi('a', 'b')}</div>`; break;
+  }
+  h += `<div class="actions"><button id="check" class="primary">Проверить</button>${S.step === 'final' ? '<button id="irr" class="alt">Нельзя сократить</button>' : ''}</div><div id="fb" class="fb"></div>`;
+  $('#current').innerHTML = h;
+
+  const ins = $$('#current input.ni');
+  ins.forEach((el, i) => {
+    el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, ''); el.classList.remove('bad'); });
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const nx = ins.slice(i + 1).find(x => !x.value);
+      if (nx) nx.focus(); else check(false);
+    });
+  });
+  $('#check').onclick = () => check(false);
+  const irr = $('#irr'); if (irr) irr.onclick = () => check(true);
+  if (ins[0]) setTimeout(() => { try { ins[0].focus({ preventScroll: true }); } catch (e) {} }, 60);
+}
+function historyLine(st) {
+  const P = S.P, n = STEPS.indexOf(st) + 1;
+  const sn = `<span class="sn">${n}</span>`;
+  switch (st) {
+    case 'denom': return `${sn} Дробь из знаменателей: ${f(P.d1, P.d2)}`;
+    case 'reduce': return `${sn} Сократили: ${chainHtml(S.chain)}`;
+    case 'equal': return `${sn} ${f(P.d1, P.d2)} = ${f(P.a, P.b)}`;
+    case 'butterfly': return `${sn} ${P.d1}·${P.b} = ${P.L}, ${P.d2}·${P.a} = ${P.L} → общий знаменатель <b>${P.L}</b>`;
+    case 'mult': return `${sn} Доп. множители: ${f(P.n1, P.d1)} <span class="mul">×${P.m1}</span>, ${f(P.n2, P.d2)} <span class="mul">×${P.m2}</span>`;
+    case 'convert': return `${sn} ${f(P.n1, P.d1)} = ${f(P.N1, P.L)}, ${f(P.n2, P.d2)} = ${f(P.N2, P.L)}`;
+    case 'compute': return `${sn} ${f(P.N1, P.L)} ${opS(P)} ${f(P.N2, P.L)} = ${f(P.R, P.L)}`;
+  }
+  return '';
+}
+function fb(msg, kind) { const el = $('#fb'); if (!el) return; el.className = 'fb ' + kind; el.innerHTML = msg; }
+const PRAISE = ['Верно! 👍', 'Отлично!', 'Так держать! 🐾', 'Молодец!', 'Правильно! ✨', 'Супер! 😺'];
+
+/* ================= игровой цикл ================= */
+function readInputs() {
+  const v = {}; let empty = false;
+  $$('#current input.ni').forEach(i => {
+    const s = i.value.trim();
+    if (s === '') empty = true;
+    v[i.dataset.k] = s === '' ? NaN : parseInt(s, 10);
+  });
+  return { v, empty };
+}
+function check(irr) {
+  if (S.step === 'done') return;
+  const { v, empty } = readInputs();
+  if (!irr && empty) { fb('Заполни все клеточки ✏️', 'info'); return; }
+  const res = V[S.step](v, irr);
+  if (res.ok) correct(res); else wrong(res);
+}
+function kittenStep(final) {
+  const before = S.pos;
+  S.pos = final ? S.pos + 1 : Math.min(S.pos + 1, S.tiles - 1);
+  if (S.pos >= S.tiles) { S.pos = S.tiles; S.won = true; }
+  placeKitten(S.pos !== before ? 'hop' : null);
+  updateProgress();
+  if (S.pos === before && !final) toast('Котёнок ждёт у мамы — дорешай пример!');
+}
+function correct(res) {
+  S.stepErr = 0;
+  const st = S.step;
+  if (S.mode === 'cloud') Cloud.stepOk(st);
+  if (res.push) (st === 'reduce' ? S.chain : S.fchain).push(res.push);
+  if (!res.done) { kittenStep(false); renderCurrent(); fb(res.msg, 'ok'); return; }
+  if (st !== 'final') $('#history').insertAdjacentHTML('beforeend', `<div class="hl">${historyLine(st)}</div>`);
+  if (st === 'mult') S.showMult = true;
+  if (st === 'final') {
+    S.step = 'done'; S.solved++;
+    kittenStep(true); renderProblem(); renderChips(); updateStats(); renderDone();
+    return;
+  }
+  S.step = STEPS[STEPS.indexOf(st) + 1];
+  // Если сократили сразу до конца, равенство «изначальная = сокращённая» уже записано в шаге 2 — шаг 3 пропускаем.
+  if (st === 'reduce' && S.chain.length === 2) S.step = 'butterfly';
+  kittenStep(false); renderProblem(); renderChips(); renderCurrent(); fb(pick(PRAISE), 'ok');
+}
+function wrong(res) {
+  S.errors++; S.stepErr++;
+  S.pos = Math.max(0, S.pos - S.cfg.knock);
+  placeKitten('knock'); updateProgress(); updateStats();
+  $$('#current input.ni').forEach(el => { if (!res.wrong || res.wrong.includes(el.dataset.k)) el.classList.add('bad'); });
+  let msg = '❌ ' + res.msg;
+  const showHint = S.stepErr >= 2 && res.hint;
+  if (showHint) msg += `<div class="hint">💡 Подсказка: ${res.hint}</div>`;
+  fb(msg, 'err');
+  toast(pick(['Ой! Котёнка сдуло ветром 💨', 'Упс! Котёнок споткнулся 🙀', 'Мяу! Котёнок откатился назад 😿']));
+  const rec = {
+    sid: SID, student: S.student, ts: Date.now(),
+    level: S.cfg.id, levelName: S.cfg.name, problemNo: S.problemNo, problem: probStr(S.P),
+    step: S.step, stepNo: STEPS.indexOf(S.step) + 1, stepName: STEP_NAMES[S.step],
+    errorType: res.type || 'wrong', expected: res.expected || '', given: res.given || '',
+    attempt: S.stepErr, hintShown: !!showHint, kittenPos: S.pos
+  };
+  journal(rec);
+  if (S.mode === 'cloud') Cloud.error(rec);
+}
+function renderDone() {
+  const P = S.P, [x, y] = S.fchain[S.fchain.length - 1];
+  const mixed = x > y ? ` <span class="mixed">= ${Math.floor(x / y)}${x % y ? ' ' + f(x % y, y) : ''}</span>` : '';
+  $('#current').innerHTML = `<div class="done"><div class="big">🎉 Пример решён!</div>
+    <div class="row">${f(P.n1, P.d1)} ${opS(P)} ${f(P.n2, P.d2)} = ${f(x, y)}${mixed}</div>
+    <button id="nextP" class="primary">${S.won ? 'Котёнок у мамы! 🐈' : 'Следующий пример ➜'}</button></div>`;
+  $('#nextP').onclick = () => S.won ? showWin() : nextProblem();
+  if (S.won) { winHearts(); setTimeout(showWin, 1600); }
+  $('#nextP').focus({ preventScroll: true });
+}
+function nextProblem() {
+  const cfg = S.cfg;
+  let P;
+  if (cfg.fixed && S.fixedIdx < cfg.fixed.length) P = buildProblem(...cfg.fixed[S.fixedIdx++]);
+  else P = genProblem(cfg);
+  S.lastKey = `${P.n1}/${P.d1}${P.op}${P.n2}/${P.d2}`;
+  S.P = P; S.problemNo++; S.step = 'denom'; S.stepErr = 0; S.showMult = false;
+  S.chain = [[P.d1, P.d2]]; S.fchain = [[P.R, P.L]];
+  $('#history').innerHTML = '';
+  renderProblem(); renderChips(); renderCurrent();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function winHearts() {
+  const m = S.pts[S.tiles];
+  ['💗', '💖', '💕'].forEach((h, i) => setTimeout(() => fxText(h, m.x - 6 + i * 10, m.y - 26, 'heart', 1600), i * 250));
+}
+
+/* ================= экраны ================= */
+function show(id) { $$('.screen').forEach(s => s.classList.toggle('active', s.id === 's-' + id)); window.scrollTo(0, 0); }
+function renderAuth() {
+  const box = $('#authBox');
+  const hint = t => { const h = $('#nameHint'); if (h) h.textContent = t; };
+  if (S.mode === 'loading') { box.innerHTML = '<div class="loading">Подключаюсь… 🐾</div>'; return; }
+  if (S.mode === 'local') {
+    box.innerHTML = `<label for="name">Как тебя зовут?</label>
+      <input id="name" maxlength="40" placeholder="Имя и фамилия" autocomplete="off" value="${esc(S.student)}">
+      <div id="nameHint"></div>`;
+    $('#name').oninput = () => { $('#name').classList.remove('bad'); hint(''); };
+    return;
+  }
+  if (Cloud.user && Cloud.profile) {
+    box.innerHTML = `<div class="hello">Привет, <b>${esc(Cloud.profile.name)}</b>! 👋</div>
+      <div class="sub">${Cloud.profile.login ? 'Логин: ' + esc(Cloud.profile.login) + ' · ' : ''}<button class="linkbtn" id="logout">Это не я — выйти</button></div>
+      <div id="nameHint"></div>`;
+    $('#logout').onclick = async () => { await Cloud.logout().catch(() => {}); renderAll(); };
+    return;
+  }
+  const reg = S.authTab === 'reg';
+  box.innerHTML = `<div class="tabs"><button class="tab ${reg ? '' : 'on'}" data-t="in">Войти</button><button class="tab ${reg ? 'on' : ''}" data-t="reg">Я новенький</button></div>
+    ${reg ? '<label>Имя и фамилия<input id="aName" maxlength="40" autocomplete="off" placeholder="Маша Иванова"></label>' : ''}
+    <label>Логин${reg ? ' (придумай)' : ''}<input id="aLogin" maxlength="15" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="masha7"></label>
+    <label>PIN-код${reg ? ' (придумай 4–8 цифр и запомни!)' : ''}<input id="aPin" type="password" inputmode="numeric" maxlength="8" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
+    <button class="primary wide" id="aGo">${reg ? 'Создать аккаунт' : 'Войти'}</button>
+    <div id="nameHint"></div>`;
+  $$('#authBox .tab').forEach(b => b.onclick = () => { S.authTab = b.dataset.t; renderAuth(); });
+  $('#aPin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#aGo').click(); });
+  $('#aGo').onclick = async () => {
+    const login = normLogin($('#aLogin').value), pin = $('#aPin').value.trim();
+    const name = reg ? $('#aName').value.trim() : '';
+    if (reg && name.length < 2) return hint('Напиши имя и фамилию.');
+    if (login.length < 3) return hint('Логин — минимум 3 символа.');
+    if (!/^\d{4,8}$/.test(pin)) return hint('PIN-код — от 4 до 8 цифр.');
+    const btn = $('#aGo'); btn.disabled = true; btn.textContent = '…';
+    try {
+      if (reg) await Cloud.register(login, name, pin); else await Cloud.login(login, pin);
+      renderAll();
+    } catch (e) {
+      console.warn(e); btn.disabled = false; btn.textContent = reg ? 'Создать аккаунт' : 'Войти'; hint(Cloud.errText(e));
+    }
+  };
+}
+function renderAll() { renderAuth(); renderLevels(); }
+function bestStars() {
+  if (S.mode === 'cloud' && Cloud.profile) {
+    const b = {}; for (const [k, v] of Object.entries(Cloud.profile.levels || {})) b[k] = v.bestStars || 0; return b;
+  }
+  return store.get('kf_best', {});
+}
+function renderLevels() {
+  const best = bestStars();
+  $('#levels').innerHTML = LEVELS.map(l => `<button class="lvl" data-id="${l.id}">
+      <span class="ic">${l.icon}</span><span><div class="nm">${l.name}</div><div class="ds">${l.desc}</div></span>
+      <span class="st">${best[l.id] ? '⭐'.repeat(best[l.id]) : ''}</span></button>`).join('');
+  $$('.lvl').forEach(b => b.onclick = () => startLevel(b.dataset.id));
+  $('#beStatus').textContent =
+    S.mode === 'cloud' ? '☁️ Прогресс и ошибки сохраняются в аккаунте ученика'
+    : S.mode === 'loading' ? ''
+    : S.cloudFailed ? '⚠️ Нет связи с сервером — играем без аккаунта, ошибки только на этом устройстве'
+    : '⚠️ Firebase не подключён — без аккаунтов, ошибки сохраняются только на этом устройстве';
+}
+function startLevel(id) {
+  if (S.mode === 'loading') return;
+  if (S.mode === 'cloud') {
+    if (!Cloud.user || !Cloud.profile) {
+      $('#nameHint').textContent = 'Сначала войди или создай аккаунт 👆';
+      $('#authBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    S.student = Cloud.profile.name;
+    Cloud.startSession();
+  } else {
+    const nameEl = $('#name'), name = nameEl.value.trim();
+    if (!name) { nameEl.classList.add('bad'); $('#nameHint').textContent = 'Напиши своё имя, чтобы начать'; nameEl.focus(); return; }
+    S.student = name; store.set('kf_name', name);
+  }
+  S.cfg = LEVELS.find(l => l.id === id);
+  Object.assign(S, { tiles: S.cfg.tiles, pos: 0, errors: 0, solved: 0, problemNo: 0, fixedIdx: 0,
+    won: false, winShown: false, t0: Date.now(), lastKey: null, levelActive: true });
+  $('#lvlName').textContent = S.cfg.icon + ' ' + S.cfg.name;
+  show('game');
+  buildScene(); placeKitten(null, true); updateProgress(); updateStats();
+  nextProblem();
+}
+function levelResult(completed) {
+  const secs = Math.round((Date.now() - S.t0) / 1000);
+  const stars = S.errors === 0 ? 3 : S.errors <= 3 ? 2 : 1;
+  if (S.mode === 'cloud') Cloud.result({ sid: SID, level: S.cfg.id, levelName: S.cfg.name, completed, errors: S.errors,
+    solved: S.solved, seconds: secs, stars: completed ? stars : 0, kittenPos: S.pos, tiles: S.tiles });
+  S.levelActive = false;
+  return { secs, stars };
+}
+function showWin() {
+  if (S.winShown) return;
+  S.winShown = true;
+  const { secs, stars } = levelResult(true);
+  const best = store.get('kf_best', {}); best[S.cfg.id] = Math.max(best[S.cfg.id] || 0, stars); store.set('kf_best', best);
+  $('#winStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+  $('#winStats').innerHTML = `Решено примеров: <b>${S.solved}</b><br>Ошибок: <b>${S.errors}</b><br>Время: <b>${Math.floor(secs / 60)} мин ${secs % 60} с</b>`;
+  const i = LEVELS.findIndex(l => l.id === S.cfg.id);
+  $('#winNext').style.display = i < LEVELS.length - 1 ? '' : 'none';
+  $('#ov-win').classList.add('show');
+}
+function closeWin() { $('#ov-win').classList.remove('show'); }
+
+$('#winNext').onclick = () => { closeWin(); const i = LEVELS.findIndex(l => l.id === S.cfg.id); startLevel(LEVELS[i + 1].id); };
+$('#winAgain').onclick = () => { closeWin(); startLevel(S.cfg.id); };
+$('#winMenu').onclick = () => { closeWin(); renderLevels(); show('menu'); };
+$('#back').onclick = () => {
+  if (S.levelActive && !S.won) {
+    if (!confirm('Выйти из уровня? Котёнок вернётся в начало.')) return;
+    levelResult(false);
+  }
+  renderLevels(); show('menu');
+};
+
+function renderJournal() {
+  const j = store.get('kf_journal', []).slice().reverse();
+  $('#jlist').innerHTML = j.length ? j.map(r => `<div class="jitem">
+      <div class="t">${esc(new Date(r.ts).toLocaleString('ru-RU'))} · ${esc(r.student)} · ${esc(r.levelName)}</div>
+      <div><b>${esc(r.problem)}</b> — шаг ${r.stepNo} «${esc(r.stepName)}»</div>
+      <div>Ответ: <span class="g">${esc(r.given)}</span> · Верно: <span class="e">${esc(r.expected)}</span></div></div>`).join('')
+    : '<p style="text-align:center;color:var(--muted)">Ошибок пока нет 🎉</p>';
+}
+$('#openJournal').onclick = () => { renderJournal(); $('#ov-journal').classList.add('show'); };
+$('#jClose').onclick = () => $('#ov-journal').classList.remove('show');
+$('#jClear').onclick = () => { if (confirm('Очистить журнал на этом устройстве?')) { store.set('kf_journal', []); renderJournal(); } };
+
+S.mode = hasConfig() ? 'loading' : 'local';
+renderAll();
+if (S.mode === 'loading') {
+  Cloud.init()
+    .then(() => { S.mode = 'cloud'; })
+    .catch(e => { console.warn('Firebase init failed', e); S.mode = 'local'; S.cloudFailed = true; })
+    .finally(renderAll);
+}
+})();
+</script>
+</body>
+</html>
